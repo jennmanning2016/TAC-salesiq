@@ -3,98 +3,181 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TAC SalesIQ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TAC SalesIQ Prompt Library</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 0; }
-    header { background: #4B286D; color: white; padding: 1em; text-align: center; }
-    main { padding: 1em; max-width: 800px; margin: auto; }
-    .prompt { background: white; padding: 1em; margin-bottom: 1em; border-radius: 8px; position: relative; }
-    .copied-popup {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background-color: #4caf50;
+    :root {
+      --telus-purple: #4b286d;
+      --telus-green: #66cc00;
+      --telus-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      margin: 0;
+      font-family: var(--telus-font);
+      background: #f5f5f5;
+    }
+    header {
+      background-color: white;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #ccc;
+    }
+    header img {
+      height: 40px;
+      margin-right: 15px;
+    }
+    h1 {
+      color: var(--telus-purple);
+      font-size: 1.5rem;
+      margin: 0;
+    }
+    nav {
+      display: flex;
+      justify-content: space-around;
+      background-color: var(--telus-purple);
       color: white;
-      padding: 4px 8px;
+      padding: 10px 0;
+    }
+    nav button {
+      background: none;
+      border: none;
+      color: white;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    nav button.active {
+      text-decoration: underline;
+    }
+    #search-box {
+      margin: 15px auto;
+      display: block;
+      max-width: 400px;
+      width: 90%;
+      padding: 8px;
+      border: 1px solid #ccc;
       border-radius: 4px;
-      font-size: 0.8em;
+    }
+    .prompt {
+      background: white;
+      margin: 10px;
+      padding: 15px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .prompt button {
+      margin-top: 8px;
+      background-color: var(--telus-green);
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .hidden {
       display: none;
     }
-    input[type="text"] { width: 100%; padding: 0.5em; margin-bottom: 1em; }
-    button { margin-top: 0.5em; }
   </style>
 </head>
 <body>
   <header>
-    <h1>TAC SalesIQ</h1>
-    <img src="tac-agcg-logo.png" alt="Logo" height="40"/>
+    <img src="TAC logo.png" alt="TELUS Logo">
+    <h1>SalesIQ Prompt Library</h1>
   </header>
-  <main>
-    <input type="text" id="search" placeholder="Search prompts..." />
-    <div id="promptList">Loading prompts...</div>
-  </main>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDjYWTQqMwbPekEBCeu5MiRpsxkq2FTcRQ",
-      authDomain: "tac-salesiq-app.firebaseapp.com",
-      projectId: "tac-salesiq-app",
-      storageBucket: "tac-salesiq-app.appspot.com",
-      messagingSenderId: "604151053298",
-      appId: "1:604151053298:web:03f4651328c31770022789"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const promptList = document.getElementById('promptList');
-    const searchInput = document.getElementById('search');
-
-    function renderPrompts(prompts) {
-      promptList.innerHTML = '';
-      prompts.forEach(doc => {
-        const p = doc.data();
-        const div = document.createElement('div');
-        div.className = 'prompt';
-        div.innerHTML = `
-          <strong>${p.title}</strong><br/>
-          <em>${p.category}</em><br/>
-          <p id="prompt-${doc.id}">${p.prompt}</p>
-          <button onclick="copyToClipboard('prompt-${doc.id}', this)">Copy</button>
-          <div class="copied-popup">Copied!</div>
-        `;
-        promptList.appendChild(div);
-      });
-    }
+  <nav>
+    <button onclick="showTab('Agriculture')" class="active">Agriculture</button>
+    <button onclick="showTab('Consumer Goods')">Consumer Goods</button>
+    <button onclick="showTab('General Sales')">General Sales</button>
+    <button onclick="showTab('Add')">Add New Prompt</button>
+  </nav>
+  <input type="text" id="search-box" placeholder="Search prompts..." onkeyup="filterPrompts()" />
+  <div id="content"></div>
+  <script>
+    const SHEET_API = "https://script.google.com/macros/s/AKfycbzxRVZ2D-4asE9APaxULublLXJ9Tz6nTUOUynQLwtfSlfMRgJiJOkbrckbBnUpdpEl7/exec";
+    let allPrompts = [];
+    let activeTab = 'Agriculture';
 
     async function loadPrompts() {
-      const snapshot = await getDocs(collection(db, "prompts"));
-      let prompts = snapshot.docs;
+      const res = await fetch(SHEET_API);
+      allPrompts = await res.json();
+      renderTab();
+    }
 
-      renderPrompts(prompts);
+    function showTab(tab) {
+      activeTab = tab;
+      document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('nav button').forEach(btn => {
+        if (btn.textContent === tab) btn.classList.add('active');
+      });
+      renderTab();
+    }
 
-      searchInput.addEventListener('input', () => {
-        const query = searchInput.value.toLowerCase();
-        const filtered = prompts.filter(doc => 
-          doc.data().title.toLowerCase().includes(query) || 
-          doc.data().prompt.toLowerCase().includes(query)
-        );
-        renderPrompts(filtered);
+    function renderTab() {
+      const content = document.getElementById("content");
+      content.innerHTML = "";
+
+      if (activeTab === "Add") {
+        content.innerHTML = `
+          <form onsubmit="submitPrompt(); return false;">
+            <input id="newTitle" placeholder="Title" required><br>
+            <textarea id="newPrompt" placeholder="Prompt" rows="4" required></textarea><br>
+            <input id="newTags" placeholder="Tags"><br>
+            <select id="newBU">
+              <option value="Agriculture">Agriculture</option>
+              <option value="Consumer Goods">Consumer Goods</option>
+              <option value="General Sales">General Sales</option>
+            </select><br>
+            <button type="submit">Save Prompt</button>
+          </form>`;
+        return;
+      }
+
+      const filtered = allPrompts.filter(p => p.businessUnit === activeTab);
+      filtered.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "prompt";
+        div.innerHTML = `
+          <strong>${p.title}</strong><br>
+          <pre>${p.prompt}</pre>
+          <em>Tags: ${p.tags || "none"}</em><br>
+          <button onclick="copyToClipboard(\`${p.prompt.replace(/`/g, '\`')}\`)">Copy</button>
+        `;
+        content.appendChild(div);
       });
     }
 
-    window.copyToClipboard = (elementId, btn) => {
-      const text = document.getElementById(elementId).innerText;
-      navigator.clipboard.writeText(text).then(() => {
-        const popup = btn.nextElementSibling;
-        popup.style.display = 'inline';
-        setTimeout(() => {
-          popup.style.display = 'none';
-        }, 2000);
+    function filterPrompts() {
+      const term = document.getElementById("search-box").value.toLowerCase();
+      const prompts = document.querySelectorAll(".prompt");
+      prompts.forEach(p => {
+        const text = p.innerText.toLowerCase();
+        p.style.display = text.includes(term) ? "block" : "none";
       });
+    }
+
+    async function submitPrompt() {
+      const newPrompt = {
+        id: Date.now(),
+        businessUnit: document.getElementById("newBU").value,
+        title: document.getElementById("newTitle").value,
+        prompt: document.getElementById("newPrompt").value,
+        tags: document.getElementById("newTags").value
+      };
+
+      await fetch(SHEET_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newPrompt)
+      });
+
+      alert("Prompt added successfully!");
+      loadPrompts();
+      showTab(newPrompt.businessUnit);
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"));
     }
 
     loadPrompts();
