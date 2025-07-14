@@ -82,7 +82,7 @@
 </head>
 <body>
   <header>
-    <img src="TAC logo.png" alt="TELUS Logo">
+    <img src="tac-logo.png" alt="TELUS Logo">
     <h1>SalesIQ Prompt Library</h1>
   </header>
   <nav>
@@ -94,14 +94,18 @@
   <input type="text" id="search-box" placeholder="Search prompts..." onkeyup="filterPrompts()" />
   <div id="content"></div>
   <script>
-    const SHEET_API = "https://script.google.com/macros/s/AKfycbzxRVZ2D-4asE9APaxULublLXJ9Tz6nTUOUynQLwtfSlfMRgJiJOkbrckbBnUpdpEl7/exec";
+    const SHEET_API = "https://script.google.com/macros/s/AKfycbwAkFA2ttiKoNAKRG96egy5p_eFAgIs-X4tJX6Zu842ceoXushXQmCb5HeWthMZHc_y/exec";
     let allPrompts = [];
     let activeTab = 'Agriculture';
 
     async function loadPrompts() {
-      const res = await fetch(SHEET_API);
-      allPrompts = await res.json();
-      renderTab();
+      try {
+        const res = await fetch(SHEET_API);
+        allPrompts = await res.json();
+        renderTab();
+      } catch (e) {
+        document.getElementById("content").innerHTML = "<p style='color: red;'>Error loading prompts. Please check your connection or backend settings.</p>";
+      }
     }
 
     function showTab(tab) {
@@ -134,6 +138,9 @@
       }
 
       const filtered = allPrompts.filter(p => p.businessUnit === activeTab);
+      if (!filtered.length) {
+        content.innerHTML = "<p>No prompts available for this category.</p>";
+      }
       filtered.forEach(p => {
         const div = document.createElement("div");
         div.className = "prompt";
