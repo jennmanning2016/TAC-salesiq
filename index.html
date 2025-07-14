@@ -3,125 +3,87 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TAC SalesIQ</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #f9f9f9; }
-    header { background: #4B286D; color: white; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
-    header img { height: 48px; }
-    h1 { margin: 0; font-size: 1.4rem; }
-    nav, .search-bar { background: #eee; padding: 1rem; text-align: center; }
-    nav button { margin: 0 10px; background: none; border: none; color: #4B286D; font-weight: bold; cursor: pointer; }
-    input[type="text"] { padding: 0.5rem; width: 60%; max-width: 400px; }
-    .container { padding: 2rem; }
-    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
-    .card { background: #fff; border-radius: 8px; padding: 1rem; box-shadow: 0 0 5px rgba(0,0,0,0.1); position: relative; }
-    .card h3 { color: #4B286D; margin-top: 0; }
-    .card p { color: #444; font-size: 0.9rem; }
-    .card button { background-color: #66CC33; border: none; color: white; padding: 0.4rem 0.7rem; margin-right: 0.5rem; cursor: pointer; }
-    .empty { text-align: center; padding: 2rem; color: #777; font-style: italic; }
+    body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 0; }
+    header { background: #4B286D; color: white; padding: 1em; text-align: center; }
+    main { padding: 1em; max-width: 800px; margin: auto; }
+    .prompt { background: white; padding: 1em; margin-bottom: 1em; border-radius: 8px; }
+    .saved { background: #e0ffe0; }
+    button { margin-top: 0.5em; }
   </style>
 </head>
 <body>
   <header>
-    <img src="tac-agcg-logo.png" alt="TELUS AGCG Logo">
-    <h1>TAC SalesIQ – Intelligent Sales Enablement</h1>
+    <h1>TAC SalesIQ</h1>
+    <img src="tac-agcg-logo.png" alt="Logo" height="40"/>
   </header>
+  <main>
+    <input type="text" id="search" placeholder="Search prompts..." style="width: 100%; padding: 0.5em; margin-bottom: 1em;"/>
+    <div id="promptList">Loading prompts...</div>
+  </main>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  <div class="search-bar">
-    <input type="text" id="searchInput" placeholder="Search prompts..." onkeyup="filterPrompts()">
-  </div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDjYWTQqMwbPekEBCeu5MiRpsxkq2FTcRQ",
+      authDomain: "tac-salesiq-app.firebaseapp.com",
+      projectId: "tac-salesiq-app",
+      storageBucket: "tac-salesiq-app.appspot.com",
+      messagingSenderId: "604151053298",
+      appId: "1:604151053298:web:03f4651328c31770022789"
+    };
 
-  <nav>
-    <button onclick="showCategory('all')">All</button>
-    <button onclick="showCategory('agriculture')">Agriculture</button>
-    <button onclick="showCategory('consumer')">Consumer Goods</button>
-    <button onclick="showSaved()">My Prompts ⭐</button>
-  </nav>
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  <div class="container">
-    <div id="promptGrid" class="card-grid"></div>
-    <div id="emptyState" class="empty" style="display:none;">No prompts match your search or filter.</div>
-  </div>
+    const promptList = document.getElementById('promptList');
+    const searchInput = document.getElementById('search');
 
-  <script>
-    const prompts = [
-      { id: 1, title: 'Account Discovery', category: 'agriculture', text: `Summarize the agriculture customer’s Salesforce data and highlight risks.` },
-{ id: 2, title: 'Renewal Risk Summary', category: 'agriculture', text: `Identify risk indicators that could impact renewal likelihood.` },
-{ id: 3, title: 'Pricing Justification', category: 'agriculture', text: `Create a pricing rationale using ROI, cost avoidance, or efficiency gains.` },
-{ id: 4, title: 'Product Usage Summary', category: 'agriculture', text: `Summarize the customer's active product use across regions.` },
-{ id: 5, title: 'TAM/SAM Opportunity', category: 'agriculture', text: `Estimate TAM/SAM based on farm size, crop types, or territory.` },
-{ id: 6, title: 'Objection Handling', category: 'consumer', text: `Respond to timing or budget objections from Consumer Goods clients.` },
-{ id: 7, title: 'Competitor Comparison', category: 'consumer', text: `Compare our solution to [Competitor] on features and pricing.` },
-{ id: 8, title: 'Expansion Discovery', category: 'consumer', text: `Identify whitespace or cross-sell opportunities in CG accounts.` },
-{ id: 9, title: 'ROI for Executives', category: 'consumer', text: `Frame ROI clearly for VP/C-level based on past performance.` },
-{ id: 10, title: 'Contract Renewal Email', category: 'consumer', text: `Write an email kicking off renewal with historical success.` },
-{ id: 11, title: 'Follow-up Email', category: 'general', text: `Write a short follow-up email after a discovery call.` },
-{ id: 12, title: 'Meeting Recap', category: 'general', text: `Create a bulleted summary of a customer meeting.` },
-{ id: 13, title: 'Executive Summary', category: 'general', text: `Draft a 3-paragraph summary of opportunity highlights.` },
-{ id: 14, title: 'CRM Summary', category: 'general', text: `Summarize key CRM notes for a handoff or review.` },
-{ id: 15, title: 'Value Proposition Generator', category: 'general', text: `Write a 1-line value prop customized to customer goals.` }
-    ];
-
-    const savedPromptIDs = JSON.parse(localStorage.getItem('savedPrompts') || '[]');
-
-    function renderPrompts(list) {
-      const grid = document.getElementById('promptGrid');
-      const empty = document.getElementById('emptyState');
-      grid.innerHTML = '';
-      if (list.length === 0) {
-        empty.style.display = 'block';
-        return;
-      }
-      empty.style.display = 'none';
-      list.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <h3>${p.title}</h3>
-          <p>${p.text}</p>
-          <button onclick="copyPrompt(p.text)">Copy</button>
-          <button onclick="toggleSave(p.id)">${savedPromptIDs.includes(p.id) ? 'Unsave' : 'Save'}</button>
+    function renderPrompts(prompts) {
+      promptList.innerHTML = '';
+      prompts.forEach(doc => {
+        const p = doc.data();
+        const div = document.createElement('div');
+        div.className = 'prompt';
+        div.innerHTML = `
+          <strong>${p.title}</strong><br/>
+          <em>${p.category}</em><br/>
+          <p>${p.prompt}</p>
+          <button onclick="savePrompt('${doc.id}')">Save</button>
         `;
-        grid.appendChild(card);
+        promptList.appendChild(div);
       });
     }
 
-    function copyPrompt(text) {
-      navigator.clipboard.writeText(text).then(() => alert('Prompt copied to clipboard!'));
+    async function loadPrompts() {
+      const snapshot = await getDocs(collection(db, "prompts"));
+      let prompts = snapshot.docs;
+
+      renderPrompts(prompts);
+
+      searchInput.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase();
+        const filtered = prompts.filter(doc => 
+          doc.data().title.toLowerCase().includes(query) || 
+          doc.data().prompt.toLowerCase().includes(query)
+        );
+        renderPrompts(filtered);
+      });
     }
 
-    function toggleSave(id) {
-      const index = savedPromptIDs.indexOf(id);
-      if (index > -1) savedPromptIDs.splice(index, 1);
-      else savedPromptIDs.push(id);
-      localStorage.setItem('savedPrompts', JSON.stringify(savedPromptIDs));
-      filterPrompts();
+    window.savePrompt = (id) => {
+      let saved = JSON.parse(localStorage.getItem("savedPrompts") || "[]");
+      if (!saved.includes(id)) {
+        saved.push(id);
+        localStorage.setItem("savedPrompts", JSON.stringify(saved));
+        alert("Prompt saved!");
+      }
     }
 
-    function filterPrompts() {
-      const query = document.getElementById('searchInput').value.toLowerCase();
-      const filtered = prompts.filter(p =>
-        (p.title + p.text).toLowerCase().includes(query) &&
-        (!currentCategory || currentCategory === 'all' || p.category === currentCategory)
-      );
-      renderPrompts(filtered);
-    }
-
-    let currentCategory = 'all';
-    function showCategory(cat) {
-      currentCategory = cat;
-      filterPrompts();
-    }
-
-    function showSaved() {
-      const saved = prompts.filter(p => savedPromptIDs.includes(p.id));
-      renderPrompts(saved);
-    }
-
-    // Initial render
-    filterPrompts();
+    loadPrompts();
   </script>
 </body>
 </html>
