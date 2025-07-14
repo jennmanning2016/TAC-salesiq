@@ -9,8 +9,19 @@
     body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 0; }
     header { background: #4B286D; color: white; padding: 1em; text-align: center; }
     main { padding: 1em; max-width: 800px; margin: auto; }
-    .prompt { background: white; padding: 1em; margin-bottom: 1em; border-radius: 8px; }
-    .saved { background: #e0ffe0; }
+    .prompt { background: white; padding: 1em; margin-bottom: 1em; border-radius: 8px; position: relative; }
+    .copied-popup {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: #4caf50;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      display: none;
+    }
+    input[type="text"] { width: 100%; padding: 0.5em; margin-bottom: 1em; }
     button { margin-top: 0.5em; }
   </style>
 </head>
@@ -20,7 +31,7 @@
     <img src="tac-agcg-logo.png" alt="Logo" height="40"/>
   </header>
   <main>
-    <input type="text" id="search" placeholder="Search prompts..." style="width: 100%; padding: 0.5em; margin-bottom: 1em;"/>
+    <input type="text" id="search" placeholder="Search prompts..." />
     <div id="promptList">Loading prompts...</div>
   </main>
   <script type="module">
@@ -51,8 +62,9 @@
         div.innerHTML = `
           <strong>${p.title}</strong><br/>
           <em>${p.category}</em><br/>
-          <p>${p.prompt}</p>
-          <button onclick="savePrompt('${doc.id}')">Save</button>
+          <p id="prompt-${doc.id}">${p.prompt}</p>
+          <button onclick="copyToClipboard('prompt-${doc.id}', this)">Copy</button>
+          <div class="copied-popup">Copied!</div>
         `;
         promptList.appendChild(div);
       });
@@ -74,13 +86,15 @@
       });
     }
 
-    window.savePrompt = (id) => {
-      let saved = JSON.parse(localStorage.getItem("savedPrompts") || "[]");
-      if (!saved.includes(id)) {
-        saved.push(id);
-        localStorage.setItem("savedPrompts", JSON.stringify(saved));
-        alert("Prompt saved!");
-      }
+    window.copyToClipboard = (elementId, btn) => {
+      const text = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const popup = btn.nextElementSibling;
+        popup.style.display = 'inline';
+        setTimeout(() => {
+          popup.style.display = 'none';
+        }, 2000);
+      });
     }
 
     loadPrompts();
