@@ -34,58 +34,66 @@
     <input type="text" id="search" placeholder="Search prompts..." />
     <div id="promptList">Loading prompts...</div>
   </main>
-  <script>
-    async function loadPrompts() {
-      const response = await fetch("https://docs.google.com/spreadsheets/d/1vdmhCv-I3nhAR0e2nEkorGH5DygGQrPt18v-KMsgKTM/gviz/tq?tqx=out:json");
-      const text = await response.text();
-      const json = JSON.parse(text.substring(47).slice(0, -2));
-      const rows = json.table.rows;
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-      const prompts = rows.map(r => {
-        return {
-          title: r.c[0]?.v || "",
-          category: r.c[1]?.v || "",
-          prompt: r.c[2]?.v || ""
-        };
-      });
+    const firebaseConfig = {
+      apiKey: "AIzaSyDjYWTQqMwbPekEBCeu5MiRpsxkq2FTcRQ",
+      authDomain: "tac-salesiq-app.firebaseapp.com",
+      projectId: "tac-salesiq-app",
+      storageBucket: "tac-salesiq-app.appspot.com",
+      messagingSenderId: "604151053298",
+      appId: "1:604151053298:web:03f4651328c31770022789"
+    };
 
-      renderPrompts(prompts);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-      document.getElementById('search').addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        const filtered = prompts.filter(p => 
-          p.title.toLowerCase().includes(query) || 
-          p.category.toLowerCase().includes(query) || 
-          p.prompt.toLowerCase().includes(query)
-        );
-        renderPrompts(filtered);
-      });
-    }
+    const promptList = document.getElementById('promptList');
+    const searchInput = document.getElementById('search');
 
     function renderPrompts(prompts) {
-      const promptList = document.getElementById('promptList');
-      promptList.innerHTML = "";
-      prompts.forEach((p, i) => {
+      promptList.innerHTML = '';
+      prompts.forEach(doc => {
+        const p = doc.data();
         const div = document.createElement('div');
         div.className = 'prompt';
-        const pid = "prompt-" + i;
         div.innerHTML = `
-          <strong>{p.title}</strong><br/>
-          <em>{p.category}</em><br/>
-          <p id="${pid}">{p.prompt}</p>
-          <button onclick="copyToClipboard('${pid}', this)">Copy</button>
+          <strong>${p.title}</strong><br/>
+          <em>${p.category}</em><br/>
+          <p id="prompt-${doc.id}">${p.prompt}</p>
+          <button onclick="copyToClipboard('prompt-${doc.id}', this)">Copy</button>
           <div class="copied-popup">Copied!</div>
         `;
         promptList.appendChild(div);
       });
     }
 
-    function copyToClipboard(id, btn) {
-      const text = document.getElementById(id).innerText;
+    async function loadPrompts() {
+      const snapshot = await getDocs(collection(db, "prompts"));
+      let prompts = snapshot.docs;
+
+      renderPrompts(prompts);
+
+      searchInput.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase();
+        const filtered = prompts.filter(doc => 
+          doc.data().title.toLowerCase().includes(query) || 
+          doc.data().prompt.toLowerCase().includes(query)
+        );
+        renderPrompts(filtered);
+      });
+    }
+
+    window.copyToClipboard = (elementId, btn) => {
+      const text = document.getElementById(elementId).innerText;
       navigator.clipboard.writeText(text).then(() => {
         const popup = btn.nextElementSibling;
         popup.style.display = 'inline';
-        setTimeout(() => popup.style.display = 'none', 2000);
+        setTimeout(() => {
+          popup.style.display = 'none';
+        }, 2000);
       });
     }
 
