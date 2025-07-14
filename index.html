@@ -47,9 +47,21 @@
 
   <script>
     const prompts = [
-      { id: 1, title: 'Account Discovery', category: 'agriculture', text: 'Summarize the agriculture customer’s Salesforce data.' },
-      { id: 2, title: 'Objection Handling', category: 'consumer', text: 'Craft a response to pricing objections from a CG client.' },
-      { id: 3, title: 'Follow-up Email', category: 'general', text: 'Write a follow-up email after a discovery call.' }
+      { id: 1, title: 'Account Discovery', category: 'agriculture', text: `Summarize the agriculture customer’s Salesforce data and highlight risks.` },
+{ id: 2, title: 'Renewal Risk Summary', category: 'agriculture', text: `Identify risk indicators that could impact renewal likelihood.` },
+{ id: 3, title: 'Pricing Justification', category: 'agriculture', text: `Create a pricing rationale using ROI, cost avoidance, or efficiency gains.` },
+{ id: 4, title: 'Product Usage Summary', category: 'agriculture', text: `Summarize the customer's active product use across regions.` },
+{ id: 5, title: 'TAM/SAM Opportunity', category: 'agriculture', text: `Estimate TAM/SAM based on farm size, crop types, or territory.` },
+{ id: 6, title: 'Objection Handling', category: 'consumer', text: `Respond to timing or budget objections from Consumer Goods clients.` },
+{ id: 7, title: 'Competitor Comparison', category: 'consumer', text: `Compare our solution to [Competitor] on features and pricing.` },
+{ id: 8, title: 'Expansion Discovery', category: 'consumer', text: `Identify whitespace or cross-sell opportunities in CG accounts.` },
+{ id: 9, title: 'ROI for Executives', category: 'consumer', text: `Frame ROI clearly for VP/C-level based on past performance.` },
+{ id: 10, title: 'Contract Renewal Email', category: 'consumer', text: `Write an email kicking off renewal with historical success.` },
+{ id: 11, title: 'Follow-up Email', category: 'general', text: `Write a short follow-up email after a discovery call.` },
+{ id: 12, title: 'Meeting Recap', category: 'general', text: `Create a bulleted summary of a customer meeting.` },
+{ id: 13, title: 'Executive Summary', category: 'general', text: `Draft a 3-paragraph summary of opportunity highlights.` },
+{ id: 14, title: 'CRM Summary', category: 'general', text: `Summarize key CRM notes for a handoff or review.` },
+{ id: 15, title: 'Value Proposition Generator', category: 'general', text: `Write a 1-line value prop customized to customer goals.` }
     ];
 
     const savedPromptIDs = JSON.parse(localStorage.getItem('savedPrompts') || '[]');
@@ -69,8 +81,8 @@
         card.innerHTML = `
           <h3>${p.title}</h3>
           <p>${p.text}</p>
-          <button onclick="copyPrompt('${p.text}')">Copy</button>
-          <button onclick="toggleSave(${p.id})">${savedPromptIDs.includes(p.id) ? 'Unsave' : 'Save'}</button>
+          <button onclick="copyPrompt(p.text)">Copy</button>
+          <button onclick="toggleSave(p.id)">${savedPromptIDs.includes(p.id) ? 'Unsave' : 'Save'}</button>
         `;
         grid.appendChild(card);
       });
@@ -85,7 +97,7 @@
       if (index > -1) savedPromptIDs.splice(index, 1);
       else savedPromptIDs.push(id);
       localStorage.setItem('savedPrompts', JSON.stringify(savedPromptIDs));
-      filterPrompts(); // re-render
+      filterPrompts();
     }
 
     function filterPrompts() {
