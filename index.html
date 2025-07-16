@@ -5,68 +5,124 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TAC SalesIQ</title>
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 0; }
-    header { background: #4B286D; color: white; padding: 1rem; text-align: center; }
-    nav { display: flex; flex-wrap: wrap; justify-content: center; background: #e5e5e5; padding: 0.5rem; }
-    nav button { margin: 0.25rem; padding: 0.5rem 1rem; border: none; background: #ccc; cursor: pointer; border-radius: 4px; }
-    nav button.active { background: #4B286D; color: white; }
-    .container { padding: 1rem; }
-    .prompt { border-bottom: 1px solid #ddd; padding: 0.5rem 0; }
-    .title { font-weight: bold; }
-    .prompt p { margin: 0.25rem 0; }
-    .copy-button { margin-top: 0.25rem; background: #4B286D; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f8f8f8;
+    }
+    h1 {
+      color: #4B286D;
+    }
+    .tab {
+      display: inline-block;
+      margin-right: 10px;
+      padding: 10px;
+      background: #d3e4cd;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    .tab.active {
+      background: #9FC088;
+      font-weight: bold;
+    }
+    .prompt-card {
+      background: white;
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    .prompt-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .prompt-tags {
+      font-style: italic;
+      color: #888;
+      margin-bottom: 10px;
+    }
+    .copy-btn {
+      background: #4B286D;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>TAC SalesIQ Prompts</h1>
-  </header>
-  <nav id="tabs"></nav>
-  <div class="container" id="prompt-container"></div>
+  <h1>TAC SalesIQ</h1>
+  <div id="tabs"></div>
+  <div id="promptContainer"></div>
+
   <script>
     const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS_bHJrzHuXbEjoPS63IHXY5AlHMbykJxHqw05ejMZces3Ixhl-PmaW6mh9zwL1YaaKw7rdRe7ncZE9/pub?output=csv";
 
     fetch(sheetURL)
-      .then(res => res.text())
-      .then(text => {
-        const rows = text.split('\n').map(row => row.split(','));
-        const headers = rows.shift();
-        const data = rows.map(row => Object.fromEntries(row.map((val, i) => [headers[i], val])));
-        const tabs = [...new Set(data.map(d => d.businessUnit).filter(Boolean))];
-
-        const tabContainer = document.getElementById('tabs');
-        const promptContainer = document.getElementById('prompt-container');
-
-        tabs.forEach((tab, index) => {
-          const btn = document.createElement('button');
-          btn.textContent = tab;
-          if (index === 0) btn.classList.add('active');
-          btn.onclick = () => {
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderPrompts(tab);
-          };
-          tabContainer.appendChild(btn);
+      .then(response => response.text())
+      .then(csv => {
+        const rows = csv.split("\n").map(row => row.split(","));
+        const headers = rows[0];
+        const data = rows.slice(1).map(row => {
+          const entry = {};
+          headers.forEach((h, i) => {
+            entry[h.trim()] = row[i] ? row[i].trim() : "";
+          });
+          return entry;
         });
 
-        function renderPrompts(tab) {
-          promptContainer.innerHTML = '';
-          data.filter(d => d.businessUnit === tab).forEach(d => {
-            const div = document.createElement('div');
-            div.className = 'prompt';
-            div.innerHTML = `<div class="title">${d.title}</div><p>${d.prompt}</p><button class="copy-button">Copy Prompt</button>`;
-            const btn = div.querySelector('button');
-            btn.onclick = () => {
-              navigator.clipboard.writeText(d.prompt).then(() => {
-                btn.textContent = 'Copied!';
-                setTimeout(() => btn.textContent = 'Copy Prompt', 1500);
-              });
+        const container = document.getElementById("promptContainer");
+        const tabsContainer = document.getElementById("tabs");
+
+        const businessUnits = [...new Set(data.map(d => d.businessUnit).filter(Boolean))];
+        let currentTab = "";
+
+        function renderTabs() {
+          tabsContainer.innerHTML = "";
+          businessUnits.forEach(unit => {
+            const tab = document.createElement("div");
+            tab.className = "tab";
+            tab.textContent = unit;
+            tab.onclick = () => {
+              currentTab = unit;
+              renderTabs();
+              renderPrompts();
             };
-            promptContainer.appendChild(div);
+            if (unit === currentTab) tab.classList.add("active");
+            tabsContainer.appendChild(tab);
+          });
+          if (!currentTab && businessUnits.length > 0) {
+            currentTab = businessUnits[0];
+            renderTabs();
+            renderPrompts();
+          }
+        }
+
+        function renderPrompts() {
+          container.innerHTML = "";
+          const filtered = data.filter(d => d.businessUnit === currentTab);
+          filtered.forEach(d => {
+            const card = document.createElement("div");
+            card.className = "prompt-card";
+            card.innerHTML = `
+              <div class="prompt-title">${d.title}</div>
+              <div class="prompt-tags">${d.tags}</div>
+              <div class="prompt-text">${d.prompt}</div>
+              <button class="copy-btn">Copy</button>
+            `;
+            card.querySelector("button").onclick = () => {
+              navigator.clipboard.writeText(d.prompt);
+            };
+            container.appendChild(card);
           });
         }
 
-        if (tabs.length > 0) renderPrompts(tabs[0]);
+        renderTabs();
+      })
+      .catch(err => {
+        document.getElementById("promptContainer").innerHTML = "<p>Error loading prompts.</p>";
+        console.error("Failed to load prompts:", err);
       });
   </script>
 </body>
